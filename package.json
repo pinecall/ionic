@@ -27,11 +27,18 @@
     "watch": "tsc --watch",
     "prepublishOnly": "npm run build"
   },
-  "author": "Pinecall",
+  "author": "Pinecall <hello@pinecall.io>",
   "license": "MIT",
+  "homepage": "https://github.com/pinecall/ionic#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pinecall/ionic.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pinecall/ionic/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "capacitor",
