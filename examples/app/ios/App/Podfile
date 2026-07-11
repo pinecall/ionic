@@ -12,12 +12,12 @@ def capacitor_pods
   pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
   pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
   pod 'CapacitorDevice', :path => '../../node_modules/@capacitor/device'
+  pod 'PinecallIonic', :path => '../../../..'
 end
 
 target 'App' do
   capacitor_pods
-  # Native WebRTC (LiveKit-maintained prebuilt) for the PinecallCall plugin
-  pod 'WebRTC-SDK', '~> 125.6422.07'
+  # WebRTC-SDK comes transitively from the PinecallIonic podspec
 end
 
 post_install do |installer|

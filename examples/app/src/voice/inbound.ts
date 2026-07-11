@@ -1,4 +1,4 @@
-import { callManager } from './callManager';
+import { callAgent } from './client';
 import { AGENTS } from '../data/agents';
 import { RING_STREAM } from '../config';
 
@@ -22,7 +22,7 @@ export function listenForInboundCalls(): () => void {
       const agent = AGENTS.find((a) => a.id === agentId) ?? AGENTS[0];
       // Reuses the same flow as an outbound tap: presents the native
       // CallKit incoming UI, connects the VoiceSession on accept.
-      callManager.startCall(agent);
+      void callAgent(agent);
     } catch (err) {
       console.error('[inbound] bad ring payload', err);
     }

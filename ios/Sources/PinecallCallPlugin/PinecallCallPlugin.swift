@@ -8,6 +8,7 @@ public class PinecallCallPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "PinecallCallPlugin"
     public let jsName = "PinecallCall"
     public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "isNativeCallSupported", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startCall", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endCall", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setMuted", returnType: CAPPluginReturnPromise),
@@ -25,6 +26,17 @@ public class PinecallCallPlugin: CAPPlugin, CAPBridgedPlugin {
         controller.onServerEvent = { [weak self] json in
             self?.notifyListeners("serverEvent", data: ["data": json])
         }
+    }
+
+    @objc func isNativeCallSupported(_ call: CAPPluginCall) {
+        // CallKit is broken on the iOS simulator (callservicesd kills incoming
+        // calls) and simulator media capture is unreliable — native calls are
+        // real-device only. CallClient falls back to @pinecall/web elsewhere.
+        #if targetEnvironment(simulator)
+        call.resolve(["supported": false])
+        #else
+        call.resolve(["supported": true])
+        #endif
     }
 
     @objc func startCall(_ call: CAPPluginCall) {

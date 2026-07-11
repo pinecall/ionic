@@ -1,7 +1,14 @@
 import { IonIcon } from '@ionic/react';
 import { call, mic, micOff, volumeHigh } from 'ionicons/icons';
-import { useCall } from '../voice/useCall';
+import { useCallClient } from '@pinecall/ionic/react';
+import { AGENTS } from '../data/agents';
+import { callClient } from '../voice/client';
 import './CallOverlay.css';
+
+/**
+ * Example in-call UI — 100% custom. Everything here comes from the headless
+ * CallClient state: build yours with any components you like.
+ */
 
 const STATUS_LABEL: Record<string, string> = {
   ringing: 'Ringing…',
@@ -19,10 +26,11 @@ function fmt(seconds: number): string {
 
 const CallOverlay: React.FC = () => {
   const {
-    agent, status, phase, isMuted, isSpeaker, messages, duration,
+    agentId, status, phase, isMuted, isSpeaker, messages, duration,
     endCall, toggleMute, toggleSpeaker,
-  } = useCall();
+  } = useCallClient(callClient);
 
+  const agent = AGENTS.find((a) => a.id === agentId);
   if (!agent) return null;
 
   const connected = status === 'connected';
@@ -37,8 +45,8 @@ const CallOverlay: React.FC = () => {
       <p className="call-status">{statusLine}</p>
 
       <div className="call-transcript">
-        {messages.slice(-4).map((m, i) => (
-          <div key={i} className={`bubble ${m.role}`}>
+        {messages.slice(-4).map((m) => (
+          <div key={m.id} className={`bubble ${m.role === 'bot' ? 'assistant' : 'user'}`}>
             {m.text}
           </div>
         ))}
@@ -61,7 +69,7 @@ const CallOverlay: React.FC = () => {
         >
           <IonIcon icon={isMuted ? micOff : mic} />
         </button>
-        <button className="round-btn hangup" onClick={endCall} aria-label="End call">
+        <button className="round-btn hangup" onClick={() => endCall()} aria-label="End call">
           <IonIcon icon={call} />
         </button>
       </div>

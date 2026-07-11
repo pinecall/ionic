@@ -4,13 +4,16 @@ PODS:
   - CapacitorCordova (8.4.1)
   - CapacitorDevice (8.0.2):
     - Capacitor
+  - PinecallIonic (0.1.0):
+    - Capacitor
+    - WebRTC-SDK (~> 125.6422.07)
   - WebRTC-SDK (125.6422.09)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorDevice (from `../../node_modules/@capacitor/device`)"
-  - WebRTC-SDK (~> 125.6422.07)
+  - PinecallIonic (from `../../../..`)
 
 SPEC REPOS:
   trunk:
@@ -23,13 +26,16 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorDevice:
     :path: "../../node_modules/@capacitor/device"
+  PinecallIonic:
+    :path: "../../../.."
 
 SPEC CHECKSUMS:
   Capacitor: 9c34c6eb2165694e51758f5b425d470cb00f5bea
   CapacitorCordova: eebe6bcf807b1b06f3f48237650f96bbcd0eef09
   CapacitorDevice: b50f119138a2b69a1e9213f4468d1e75e4239cca
+  PinecallIonic: b1c0385acced95c06fe600dbe2c2eb091f36b2b8
   WebRTC-SDK: d75580e98b394310e934d1b404d19fd54db4b9d2
 
-PODFILE CHECKSUM: f1360edd2118d9e358e779ff178c3d3da5bd814e
+PODFILE CHECKSUM: f67568d2f6e79be3442ea9a912cc6c2ba0312eec
 
 COCOAPODS: 1.16.2

@@ -1,74 +1,49 @@
-import { Capacitor } from '@capacitor/core';
 import { VoiceSession } from '@pinecall/web/core';
+import { PinecallCall } from './plugin';
 import type {
-  SessionStatus,
-  CallPhase,
+  CallState,
+  NativeCallState,
+  StartCallOptions,
   TranscriptMessage,
-} from '@pinecall/web/core';
-import type { AgentContact } from '../data/agents';
-import { TOKEN_ENDPOINT } from '../config';
-import { PinecallCall, type NativeCallState } from './nativeCall';
+} from './definitions';
 
-/**
- * CallManager — single source of truth for an AI voice call.
- *
- * Two strategies behind ONE state/API (Strategy pattern):
- *
- *  - **iOS device** → the in-app native plugin (PinecallCall): CallKit owns
- *    the call UI AND WebRTC.framework owns the audio, coordinated through
- *    CallKit's didActivate. Fully native, WhatsApp-style. The webview only
- *    renders the agent list + live transcript (from `serverEvent`s).
- *  - **Browser / iOS simulator** → @pinecall/web VoiceSession (webview
- *    WebRTC) with the in-app overlay. CallKit doesn't work on the simulator
- *    (callservicesd kills the call, verified) and webview audio can't join a
- *    CXCall's audio session — hence the split.
- */
-
-export interface CallState {
-  status: SessionStatus | 'ringing';
-  phase: CallPhase;
-  agent: AgentContact | null;
-  isMuted: boolean;
-  /** Loudspeaker on (native only — earpiece is the default, like WhatsApp). */
-  isSpeaker: boolean;
-  messages: TranscriptMessage[];
-  duration: number;
-}
+const INITIAL_STATE: CallState = {
+  status: 'idle',
+  phase: 'idle',
+  agentId: null,
+  isMuted: false,
+  isSpeaker: false,
+  duration: 0,
+  messages: [],
+  error: null,
+};
 
 type Listener = () => void;
 
-const isNative = Capacitor.isNativePlatform();
-
-/** CallKit + native WebRTC only work on REAL devices (not the simulator). */
-async function resolveUseNative(): Promise<boolean> {
-  if (!isNative) return false;
-  const { Device } = await import('@capacitor/device');
-  const info = await Device.getInfo();
-  return !info.isVirtual;
-}
-
-class CallManager {
-  private session: VoiceSession | null = null; // web/simulator strategy
-  private agent: AgentContact | null = null;
+/**
+ * CallClient — headless call store. Framework-agnostic: subscribe to state
+ * changes and render ANY UI you want (the transcript is plain data).
+ *
+ * Strategy per platform, one API:
+ *  - iOS device → native plugin: CallKit UI + WebRTC.framework audio,
+ *    coordinated through CallKit's audio-session activation.
+ *  - Browser / iOS simulator → @pinecall/web VoiceSession (webview WebRTC);
+ *    render your own in-call UI from this state.
+ *
+ * React: pair with `useCallClient` from `@pinecall/ionic/react`.
+ */
+export class CallClient {
+  private state: CallState = { ...INITIAL_STATE };
   private listeners = new Set<Listener>();
+  private session: VoiceSession | null = null; // web strategy
   private useNative = false;
   private nativeWired = false;
   private durationTimer: ReturnType<typeof setInterval> | null = null;
   private botWords: Record<string, string[]> = {};
 
-  private state: CallState = {
-    status: 'idle',
-    phase: 'idle',
-    agent: null,
-    isMuted: false,
-    isSpeaker: false,
-    messages: [],
-    duration: 0,
-  };
+  // ── reactive store (plugs into useSyncExternalStore, Vue refs, etc.) ──────
 
-  // ---- reactive store (React useSyncExternalStore) --------------------------
-
-  getState = (): CallState => this.state;
+  getState = (): Readonly<CallState> => this.state;
 
   subscribe = (cb: Listener): (() => void) => {
     this.listeners.add(cb);
@@ -80,31 +55,33 @@ class CallManager {
     this.listeners.forEach((l) => l());
   }
 
-  // ---- public API -----------------------------------------------------------
+  // ── public API ─────────────────────────────────────────────────────────────
 
-  /** Place a call to an AI agent. Arrow-bound so it survives destructuring. */
-  startCall = async (agent: AgentContact): Promise<void> => {
+  startCall = async (opts: StartCallOptions): Promise<void> => {
     this.reset();
-    this.useNative = await resolveUseNative();
-    console.log(`[CM] startCall(${agent.id}) — native=${this.useNative}`);
+    this.useNative = (await PinecallCall.isNativeCallSupported()).supported;
 
-    this.agent = agent;
-    this.set({ agent, status: this.useNative ? 'ringing' : 'connecting', messages: [] });
+    this.set({
+      agentId: opts.agentId,
+      status: this.useNative ? 'ringing' : 'connecting',
+      messages: [],
+      error: null,
+    });
 
     if (this.useNative) {
       await this.ensureNativeWired();
       await PinecallCall.startCall({
-        callId: `pc-${agent.id}-${Math.floor(performance.now()).toString(36)}`,
-        callerName: agent.name,
-        handle: agent.tagline,
-        tokenUrl: `${TOKEN_ENDPOINT}?agent=${encodeURIComponent(agent.id)}`,
+        callId: `pc-${opts.agentId}-${Math.floor(performance.now()).toString(36)}`,
+        callerName: opts.callerName,
+        handle: opts.handle,
+        tokenUrl: opts.tokenUrl,
       });
     } else {
       this.session = new VoiceSession({
-        agent: agent.id,
-        config: agent.config,
+        agent: opts.agentId,
+        config: opts.config,
         tokenProvider: () =>
-          fetch(`${TOKEN_ENDPOINT}?agent=${encodeURIComponent(agent.id)}`).then((r) => {
+          fetch(opts.tokenUrl).then((r) => {
             if (!r.ok) throw new Error(`token endpoint ${r.status}`);
             return r.json();
           }),
@@ -113,61 +90,58 @@ class CallManager {
       try {
         await this.session.connect();
       } catch (err) {
-        console.error('[CM] connect failed', err);
+        this.set({ error: err instanceof Error ? err.message : String(err) });
         this.reset();
       }
     }
   };
 
-  /** Hang up from the in-app UI. */
   endCall = async (): Promise<void> => {
     if (this.useNative) {
-      await PinecallCall.endCall(); // 'state: ended' event runs reset()
+      await PinecallCall.endCall(); // 'ended' state event runs reset()
     } else {
       this.reset();
     }
   };
 
-  toggleMute(): void {
+  toggleMute = (): void => {
     const muted = !this.state.isMuted;
     if (this.useNative) {
-      PinecallCall.setMuted({ muted });
+      void PinecallCall.setMuted({ muted });
       this.set({ isMuted: muted });
     } else if (this.session) {
       this.session.setMuted(muted);
       this.set({ isMuted: this.session.getState().isMuted });
     }
-  }
+  };
 
-  /** Loudspeaker ↔ earpiece (native device only; no-op on web/simulator). */
-  toggleSpeaker(): void {
+  /** Loudspeaker ↔ earpiece. No-op in browsers. */
+  toggleSpeaker = (): void => {
     if (!this.useNative) return;
     const on = !this.state.isSpeaker;
-    PinecallCall.setSpeaker({ on });
+    void PinecallCall.setSpeaker({ on });
     this.set({ isSpeaker: on });
-  }
+  };
 
-  // ---- native strategy: plugin events ---------------------------------------
+  // ── native strategy ────────────────────────────────────────────────────────
 
   private async ensureNativeWired() {
     if (this.nativeWired) return;
     this.nativeWired = true;
 
     await PinecallCall.addListener('state', ({ state, reason }) => {
-      console.log(`[CM] native state=${state}${reason ? ` (${reason})` : ''}`);
-      this.onNativeState(state);
+      this.onNativeState(state, reason);
     });
-
     await PinecallCall.addListener('serverEvent', ({ data }) => {
       try {
         this.onServerEvent(JSON.parse(data));
       } catch {
-        /* non-JSON frame — ignore */
+        /* non-JSON frame */
       }
     });
   }
 
-  private onNativeState(state: NativeCallState) {
+  private onNativeState(state: NativeCallState, reason?: string) {
     switch (state) {
       case 'ringing':
         this.set({ status: 'ringing' });
@@ -183,15 +157,18 @@ class CallManager {
         }, 1000);
         break;
       }
+      case 'error':
+        this.set({ error: reason ?? 'call failed' });
+        this.reset();
+        break;
       case 'ended':
       case 'declined':
-      case 'error':
         this.reset();
         break;
     }
   }
 
-  /** Map Pinecall DataChannel events → transcript (same wire as VoiceSession). */
+  /** Pinecall DataChannel events → transcript (same wire as VoiceSession). */
   private onServerEvent(d: Record<string, any>) {
     switch (d.event) {
       case 'user.speaking':
@@ -223,7 +200,9 @@ class CallManager {
     if (last?.role === 'user' && last.isInterim) {
       this.set({ messages: [...msgs.slice(0, -1), { ...last, text, isInterim }] });
     } else {
-      this.set({ messages: [...msgs, { id: msgs.length + 1, role: 'user', text, isInterim }] });
+      this.set({
+        messages: [...msgs, { id: msgs.length + 1, role: 'user', text, isInterim }],
+      });
     }
   }
 
@@ -233,26 +212,31 @@ class CallManager {
     if (idx >= 0) {
       this.set({ messages: msgs.map((m, i) => (i === idx ? { ...m, text } : m)) });
     } else {
-      this.set({ messages: [...msgs, { id: msgs.length + 1, role: 'bot', text, messageId }] });
+      this.set({
+        messages: [...msgs, { id: msgs.length + 1, role: 'bot', text, messageId }],
+      });
     }
   }
 
-  // ---- web/simulator strategy ------------------------------------------------
+  // ── web strategy ───────────────────────────────────────────────────────────
 
   private wireSession(session: VoiceSession) {
     session.subscribe(() => {
       const s = session.getState();
       this.set({
-        status: s.status,
-        phase: s.phase,
+        status: s.status === 'error' ? 'error' : s.status,
+        phase: (s.phase === 'pause' ? 'listening' : s.phase) as CallState['phase'],
         isMuted: s.isMuted,
-        messages: s.messages,
+        messages: s.messages.filter(
+          (m): m is TranscriptMessage & { role: 'user' | 'bot' } => m.role !== 'system',
+        ),
         duration: s.duration,
+        error: s.error,
       });
     });
   }
 
-  // ---- teardown ---------------------------------------------------------------
+  // ── teardown ───────────────────────────────────────────────────────────────
 
   private reset() {
     if (this.durationTimer) {
@@ -261,17 +245,7 @@ class CallManager {
     }
     this.session?.destroy();
     this.session = null;
-    this.agent = null;
     this.botWords = {};
-    this.set({
-      status: 'idle',
-      phase: 'idle',
-      agent: null,
-      isMuted: false,
-      isSpeaker: false,
-      duration: 0,
-    });
+    this.set({ ...INITIAL_STATE, error: this.state.error });
   }
 }
-
-export const callManager = new CallManager();

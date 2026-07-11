@@ -12,15 +12,16 @@ import {
   IonIcon,
 } from '@ionic/react';
 import { call as callIcon } from 'ionicons/icons';
+import { useCallClient } from '@pinecall/ionic/react';
 import { AGENTS } from '../data/agents';
-import { useCall } from '../voice/useCall';
+import { callClient, callAgent } from '../voice/client';
 import CallOverlay from '../components/CallOverlay';
 import './Home.css';
 
 const Home: React.FC = () => {
-  const { startCall, agent: activeAgent, status } = useCall();
+  const { status } = useCallClient(callClient);
   // While ringing, CallKit owns the screen — our overlay appears on accept.
-  const showOverlay = activeAgent !== null && status !== 'ringing' && status !== 'idle';
+  const showOverlay = status !== 'idle' && status !== 'ringing';
 
   return (
     <IonPage>
@@ -51,7 +52,7 @@ const Home: React.FC = () => {
                 fill="clear"
                 shape="round"
                 aria-label={`Call ${a.name}`}
-                onClick={() => startCall(a)}
+                onClick={() => callAgent(a)}
               >
                 <IonIcon slot="icon-only" icon={callIcon} color="success" />
               </IonButton>
