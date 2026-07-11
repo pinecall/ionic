@@ -38,14 +38,22 @@ const CallOverlay: React.FC = () => {
 
   return (
     <div className="call-overlay">
-      <div className={`call-avatar phase-${phase}`}>
-        <span>{agent.avatar}</span>
+      <div className="glow glow-top" />
+      <div className="glow glow-bottom" />
+
+      <div className="call-head">
+        <div className={`call-avatar phase-${phase}`}>
+          <span>{agent.avatar}</span>
+        </div>
+        <h1 className="call-name">{agent.name}</h1>
+        <div className={`status-pill ${connected ? 'live' : ''}`}>
+          <span className="dot" />
+          {statusLine}
+        </div>
       </div>
-      <h1 className="call-name">{agent.name}</h1>
-      <p className="call-status">{statusLine}</p>
 
       <div className="call-transcript">
-        {messages.slice(-4).map((m) => (
+        {messages.slice(-6).map((m) => (
           <div key={m.id} className={`bubble ${m.role === 'bot' ? 'assistant' : 'user'}`}>
             {m.text}
           </div>

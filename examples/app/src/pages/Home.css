@@ -1,0 +1,31 @@
+.agent-avatar {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #f0eefe;
+  font-size: 28px;
+}
+
+/* Card-like agent rows */
+ion-content ion-list {
+  background: transparent;
+  padding: 8px 12px;
+}
+ion-content ion-item {
+  --background: var(--ion-card-background, #fff);
+  --border-radius: 18px;
+  --padding-start: 14px;
+  --inner-padding-end: 10px;
+  margin: 0 4px 12px;
+  border-radius: 18px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+ion-content ion-item h2 {
+  font-weight: 700;
+  font-size: 17px;
+}
+ion-content ion-item p {
+  color: #8a8a8e;
+}

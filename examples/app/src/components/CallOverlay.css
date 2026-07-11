@@ -5,99 +5,127 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: max(64px, env(safe-area-inset-top)) 24px
-    max(40px, env(safe-area-inset-bottom));
-  background: radial-gradient(circle at 50% 22%, #2a2a35 0%, #14141a 60%, #0b0b0f 100%);
+  padding: max(72px, env(safe-area-inset-top)) 22px max(48px, env(safe-area-inset-bottom));
+  background: #0b0b10;
   color: #fff;
+  overflow: hidden;
 }
 
+/* ambient glows */
+.glow {
+  position: absolute;
+  width: 460px;
+  height: 460px;
+  border-radius: 50%;
+  filter: blur(20px);
+  pointer-events: none;
+}
+.glow-top { top: -200px; background: rgba(120, 86, 255, 0.22); }
+.glow-bottom { bottom: -240px; background: rgba(52, 199, 89, 0.14); }
+
+.call-head { display: flex; flex-direction: column; align-items: center; z-index: 1; }
+
 .call-avatar {
-  width: 128px;
-  height: 128px;
+  position: relative;
+  width: 132px;
+  height: 132px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 64px;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.5);
+  font-size: 62px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
-
-/* subtle pulse while the agent is speaking */
-.call-avatar.phase-speaking {
-  animation: pulse 1.4s ease-out infinite;
+/* soft pulsing halo while the agent speaks */
+.call-avatar.phase-speaking::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: #34c759;
+  z-index: -1;
+  animation: halo 1.8s ease-out infinite;
 }
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.5); }
-  100% { box-shadow: 0 0 0 28px rgba(52, 199, 89, 0); }
+@keyframes halo {
+  0% { transform: scale(1); opacity: 0.45; }
+  100% { transform: scale(1.35); opacity: 0; }
 }
 
 .call-name {
-  margin: 24px 0 6px;
-  font-size: 28px;
-  font-weight: 600;
+  margin: 22px 0 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
-.call-status {
-  margin: 0;
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.6);
-  min-height: 20px;
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  font-variant-numeric: tabular-nums;
 }
+.status-pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+}
+.status-pill.live .dot { background: #34c759; }
 
 .call-transcript {
   flex: 1;
   width: 100%;
-  max-width: 420px;
-  margin-top: 28px;
+  max-width: 440px;
+  margin-top: 24px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   justify-content: flex-end;
   overflow: hidden;
+  z-index: 1;
 }
 
 .bubble {
-  padding: 10px 14px;
-  border-radius: 16px;
+  padding: 11px 15px;
+  border-radius: 20px;
   font-size: 15px;
   line-height: 1.35;
-  max-width: 85%;
+  max-width: 82%;
 }
 .bubble.assistant {
   align-self: flex-start;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.09);
+  border-bottom-left-radius: 6px;
 }
 .bubble.user {
   align-self: flex-end;
-  background: #34c759;
-  color: #06210f;
+  background: #2f6bff;
+  color: #fff;
+  border-bottom-right-radius: 6px;
 }
 
-.call-actions {
-  display: flex;
-  gap: 48px;
-  margin-top: 32px;
-}
+.call-actions { display: flex; gap: 28px; margin-top: 20px; z-index: 1; }
 
 .round-btn {
-  width: 68px;
-  height: 68px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: grid;
   place-items: center;
-  font-size: 26px;
+  font-size: 27px;
   color: #fff;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.1);
   transition: transform 0.1s ease, background 0.2s ease;
 }
 .round-btn:active { transform: scale(0.92); }
-.round-btn:disabled { opacity: 0.4; }
-.round-btn.active { background: #fff; color: #14141a; }
-
-.round-btn.hangup {
-  background: #ff3b30;
-}
-.round-btn.hangup ion-icon {
-  transform: rotate(135deg);
-}
+.round-btn:disabled { opacity: 0.35; }
+.round-btn.active { background: #fff; color: #14141a; border-color: #fff; }
+.round-btn.hangup { background: #ff3b30; border-color: #ff3b30; }
+.round-btn.hangup ion-icon { transform: rotate(135deg); }
