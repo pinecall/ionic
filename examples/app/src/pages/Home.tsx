@@ -11,7 +11,7 @@ import {
   IonButton,
   IonIcon,
 } from '@ionic/react';
-import { call as callIcon } from 'ionicons/icons';
+import { call as callIcon, notifications as ringIcon } from 'ionicons/icons';
 import { useCallClient } from '@pinecall/ionic/react';
 import { AGENTS } from '../data/agents';
 import { callClient, callAgent } from '../voice/client';
@@ -47,12 +47,23 @@ const Home: React.FC = () => {
                 <h2>{a.name}</h2>
                 <p>{a.tagline}</p>
               </IonLabel>
+              {/* Simulate the agent calling YOU — native incoming ring */}
+              <IonButton
+                slot="end"
+                fill="clear"
+                shape="round"
+                aria-label={`${a.name} calls you`}
+                onClick={() => callAgent(a, 'incoming')}
+              >
+                <IonIcon slot="icon-only" icon={ringIcon} color="warning" />
+              </IonButton>
+              {/* You call the agent — native outgoing call */}
               <IonButton
                 slot="end"
                 fill="clear"
                 shape="round"
                 aria-label={`Call ${a.name}`}
-                onClick={() => callAgent(a)}
+                onClick={() => callAgent(a, 'outgoing')}
               >
                 <IonIcon slot="icon-only" icon={callIcon} color="success" />
               </IonButton>

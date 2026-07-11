@@ -46,6 +46,13 @@ export interface StartCallOptions {
   /** Secondary line in the native call UI (e.g. "AI voice agent"). */
   handle?: string;
   /**
+   * `'outgoing'` (default) — the user dials the agent: native outgoing-call
+   * UI, connects immediately. `'incoming'` — the agent calls the user:
+   * native ring, connects on answer. Ringing a killed/backgrounded app
+   * requires PushKit (paid Apple Developer account) — on the roadmap.
+   */
+  direction?: 'outgoing' | 'incoming';
+  /**
    * Your backend endpoint returning `{ token, server }` — mint it with
    * `agent.createToken("webrtc")`. The plugin fetches it directly (native)
    * or via fetch (web). Your Pinecall API key never reaches the client.
@@ -71,12 +78,13 @@ export type NativeCallState =
 export interface PinecallCallPlugin {
   /** True on a physical iOS device (CallKit + native WebRTC available). */
   isNativeCallSupported(): Promise<{ supported: boolean }>;
-  /** Ring natively; on answer the plugin connects WebRTC on its own. */
+  /** Ring (incoming) or dial (outgoing) natively; the plugin owns WebRTC. */
   startCall(options: {
     callId: string;
     callerName: string;
     handle?: string;
     tokenUrl: string;
+    direction?: 'outgoing' | 'incoming';
   }): Promise<void>;
   endCall(): Promise<void>;
   setMuted(options: { muted: boolean }): Promise<void>;

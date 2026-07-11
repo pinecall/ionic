@@ -115,6 +115,23 @@ function CallScreen() {
 > when `status` is `connecting`/`connected` (see the example app's
 > [Home.tsx](examples/app/src/pages/Home.tsx)).
 
+### Direction: you call the agent, or the agent calls you
+
+`direction: 'outgoing'` (default) shows the native **outgoing**-call UI and
+connects immediately. `direction: 'incoming'` presents a native **ring** and
+connects on answer — use it to simulate the agent calling the user (the example
+app's server also fires this via an SSE trigger).
+
+```ts
+call.startCall({ agentId, callerName, tokenUrl });                        // you dial
+call.startCall({ agentId, callerName, tokenUrl, direction: 'incoming' }); // agent rings you
+```
+
+> **Heads up:** `'incoming'` only rings while the app is running. To ring a
+> **backgrounded or killed** app (like WhatsApp), you need PushKit — which
+> requires a paid Apple Developer account. Full reference implementation:
+> [`docs/background-calls-pushkit.md`](docs/background-calls-pushkit.md).
+
 ### Any other framework
 
 `CallClient` is a plain subscribable store — no React required:
@@ -130,7 +147,7 @@ client.subscribe(() => render(client.getState()));
 
 | Member | Description |
 |---|---|
-| `startCall(opts)` | Ring natively (device) or connect directly (web/simulator). `opts: { agentId, callerName, handle?, tokenUrl, config? }` |
+| `startCall(opts)` | Start a call. `opts: { agentId, callerName, handle?, tokenUrl, direction?, config? }` — `direction: 'outgoing'` (default: user dials the agent, native outgoing UI) or `'incoming'` (agent calls the user, native ring). On web/simulator both connect directly. |
 | `endCall()` | Hang up (also syncs the native call UI). |
 | `toggleMute()` | Mic on/off (native mute button also works). |
 | `toggleSpeaker()` | Loudspeaker ↔ earpiece (device only; earpiece is the default). |
@@ -177,8 +194,10 @@ npx cap run ios   # real device — CallKit doesn't work on the simulator
 ## Roadmap
 
 - Android (ConnectionService + native WebRTC)
-- True outgoing-call UX (`CXStartCallAction` instead of self-incoming ring)
-- PushKit/VoIP push — ring a killed app when the agent calls you
+- **PushKit/VoIP push** — ring a killed/backgrounded app when the agent calls
+  you. Needs a **paid Apple Developer account** (VoIP push certificate).
+  Reference implementation (native + backend code) →
+  [`docs/background-calls-pushkit.md`](docs/background-calls-pushkit.md)
 - Mid-call `configure()` (hot-swap voice/language) and sealed token metadata
 - Reconnection / ICE restarts, bluetooth route picker, CallKit icon
 - `@pinecall/react-native` with the same architecture

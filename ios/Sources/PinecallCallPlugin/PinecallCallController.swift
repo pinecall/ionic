@@ -26,6 +26,8 @@ final class PinecallCallController: NSObject {
         let callerName: String
         let handle: String
         let tokenUrl: String
+        /// "outgoing" (user dials the agent) or "incoming" (agent calls the user)
+        let direction: String
     }
 
     /// state values emitted to JS: ringing | connecting | connected | ended | declined | error
@@ -86,17 +88,43 @@ final class PinecallCallController: NSObject {
             self.currentOptions = opts
             self.answered = false
 
-            let update = CXCallUpdate()
-            update.remoteHandle = CXHandle(type: .generic, value: opts.handle)
-            update.localizedCallerName = opts.callerName
-            update.hasVideo = false
-            update.supportsHolding = false
-            update.supportsDTMF = false
-
-            self.provider.reportNewIncomingCall(with: uuid, update: update) { error in
-                if error == nil { self.onState?("ringing", nil) }
-                completion(error)
+            if opts.direction == "outgoing" {
+                self.startOutgoing(uuid: uuid, opts: opts, completion: completion)
+            } else {
+                self.reportIncoming(uuid: uuid, opts: opts, completion: completion)
             }
+        }
+    }
+
+    /// User dials the agent — native OUTGOING call UI (no ring).
+    private func startOutgoing(uuid: UUID, opts: StartOptions, completion: @escaping (Error?) -> Void) {
+        let handle = CXHandle(type: .generic, value: opts.handle)
+        let action = CXStartCallAction(call: uuid, handle: handle)
+        action.contactIdentifier = opts.callerName
+        callController.request(CXTransaction(action: action)) { [weak self] error in
+            guard let self else { return }
+            if error == nil {
+                // Name the call in the system UI.
+                let update = CXCallUpdate()
+                update.localizedCallerName = opts.callerName
+                self.provider.reportCall(with: uuid, updated: update)
+                self.onState?("connecting", nil)
+            }
+            completion(error)
+        }
+    }
+
+    private func reportIncoming(uuid: UUID, opts: StartOptions, completion: @escaping (Error?) -> Void) {
+        let update = CXCallUpdate()
+        update.remoteHandle = CXHandle(type: .generic, value: opts.handle)
+        update.localizedCallerName = opts.callerName
+        update.hasVideo = false
+        update.supportsHolding = false
+        update.supportsDTMF = false
+
+        provider.reportNewIncomingCall(with: uuid, update: update) { [weak self] error in
+            if error == nil { self?.onState?("ringing", nil) }
+            completion(error)
         }
     }
 
@@ -280,16 +308,29 @@ extension PinecallCallController: CXProviderDelegate {
 
     func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
         answered = true
-        // Configure the shared audio session for a voice call; the audio units
-        // start in didActivate.
+        configureCallAudioSession()
+        connectWebRTC()
+        action.fulfill()
+    }
+
+    /// Outgoing call — CallKit asks us to start it: same audio + WebRTC path,
+    /// then report the dialing progress so the system UI shows "calling…".
+    func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
+        answered = true // hanging up an outgoing call is "ended", not "declined"
+        configureCallAudioSession()
+        connectWebRTC()
+        action.fulfill()
+        provider.reportOutgoingCall(with: action.callUUID, startedConnectingAt: Date())
+    }
+
+    /// Configure the shared audio session for a voice call; the audio units
+    /// start in didActivate.
+    private func configureCallAudioSession() {
         let session = RTCAudioSession.sharedInstance()
         session.lockForConfiguration()
         try? session.setCategory(AVAudioSession.Category.playAndRecord, with: [.allowBluetooth])
         try? session.setMode(AVAudioSession.Mode.voiceChat)
         session.unlockForConfiguration()
-
-        connectWebRTC()
-        action.fulfill()
     }
 
     func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
@@ -338,6 +379,10 @@ extension PinecallCallController: RTCPeerConnectionDelegate {
     func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCPeerConnectionState) {
         switch newState {
         case .connected:
+            // Outgoing calls: tell CallKit the call is live (stops "calling…").
+            if currentOptions?.direction == "outgoing", let uuid = currentUUID {
+                provider.reportOutgoingCall(with: uuid, connectedAt: Date())
+            }
             onState?("connected", nil)
         case .disconnected, .failed:
             DispatchQueue.main.async { [weak self] in

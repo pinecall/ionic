@@ -60,10 +60,11 @@ export class CallClient {
   startCall = async (opts: StartCallOptions): Promise<void> => {
     this.reset();
     this.useNative = (await PinecallCall.isNativeCallSupported()).supported;
+    const direction = opts.direction ?? 'outgoing';
 
     this.set({
       agentId: opts.agentId,
-      status: this.useNative ? 'ringing' : 'connecting',
+      status: this.useNative && direction === 'incoming' ? 'ringing' : 'connecting',
       messages: [],
       error: null,
     });
@@ -75,6 +76,7 @@ export class CallClient {
         callerName: opts.callerName,
         handle: opts.handle,
         tokenUrl: opts.tokenUrl,
+        direction,
       });
     } else {
       this.session = new VoiceSession({

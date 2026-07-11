@@ -9,13 +9,17 @@ import { TOKEN_ENDPOINT } from '../config';
  */
 export const callClient = new CallClient();
 
-/** Start a call to one of our address-book agents. */
-export function callAgent(agent: AgentContact): Promise<void> {
+/** Start a call with an address-book agent, in either direction. */
+export function callAgent(
+  agent: AgentContact,
+  direction: 'outgoing' | 'incoming' = 'outgoing',
+): Promise<void> {
   return callClient.startCall({
     agentId: agent.id,
     callerName: agent.name,
     handle: agent.tagline,
     tokenUrl: `${TOKEN_ENDPOINT}?agent=${encodeURIComponent(agent.id)}`,
     config: agent.config,
+    direction,
   });
 }

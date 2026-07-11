@@ -22,7 +22,7 @@ export function listenForInboundCalls(): () => void {
       const agent = AGENTS.find((a) => a.id === agentId) ?? AGENTS[0];
       // Reuses the same flow as an outbound tap: presents the native
       // CallKit incoming UI, connects the VoiceSession on accept.
-      void callAgent(agent);
+      void callAgent(agent, 'incoming');
     } catch (err) {
       console.error('[inbound] bad ring payload', err);
     }

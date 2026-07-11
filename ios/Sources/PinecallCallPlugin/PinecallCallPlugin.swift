@@ -50,7 +50,8 @@ public class PinecallCallPlugin: CAPPlugin, CAPBridgedPlugin {
             callId: callId,
             callerName: callerName,
             handle: call.getString("handle") ?? callerName,
-            tokenUrl: tokenUrl
+            tokenUrl: tokenUrl,
+            direction: call.getString("direction") ?? "outgoing"
         )
         controller.startCall(opts) { error in
             if let error {
