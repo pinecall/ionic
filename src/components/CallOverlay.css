@@ -1,0 +1,103 @@
+.call-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: max(64px, env(safe-area-inset-top)) 24px
+    max(40px, env(safe-area-inset-bottom));
+  background: radial-gradient(circle at 50% 22%, #2a2a35 0%, #14141a 60%, #0b0b0f 100%);
+  color: #fff;
+}
+
+.call-avatar {
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 64px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.5);
+}
+
+/* subtle pulse while the agent is speaking */
+.call-avatar.phase-speaking {
+  animation: pulse 1.4s ease-out infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.5); }
+  100% { box-shadow: 0 0 0 28px rgba(52, 199, 89, 0); }
+}
+
+.call-name {
+  margin: 24px 0 6px;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.call-status {
+  margin: 0;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  min-height: 20px;
+}
+
+.call-transcript {
+  flex: 1;
+  width: 100%;
+  max-width: 420px;
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 15px;
+  line-height: 1.35;
+  max-width: 85%;
+}
+.bubble.assistant {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.1);
+}
+.bubble.user {
+  align-self: flex-end;
+  background: #34c759;
+  color: #06210f;
+}
+
+.call-actions {
+  display: flex;
+  gap: 48px;
+  margin-top: 32px;
+}
+
+.round-btn {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: none;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  transition: transform 0.1s ease, background 0.2s ease;
+}
+.round-btn:active { transform: scale(0.92); }
+.round-btn:disabled { opacity: 0.4; }
+.round-btn.active { background: #fff; color: #14141a; }
+
+.round-btn.hangup {
+  background: #ff3b30;
+}
+.round-btn.hangup ion-icon {
+  transform: rotate(135deg);
+}
