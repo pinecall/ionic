@@ -1,6 +1,6 @@
 {
   "name": "@pinecall/ionic",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Native WhatsApp-style AI voice calls for Ionic/Capacitor apps — CallKit UI + native WebRTC audio, powered by Pinecall agents. Headless core + React hooks: build your own call/transcript UI.",
   "main": "dist/index.js",
   "module": "dist/index.js",
