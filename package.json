@@ -20,7 +20,8 @@
     "dist/",
     "ios/Sources",
     "Package.swift",
-    "PinecallIonic.podspec"
+    "PinecallIonic.podspec",
+    "android/"
   ],
   "scripts": {
     "build": "tsc",
@@ -48,7 +49,10 @@
     "webrtc",
     "voice",
     "ai-agent",
-    "pinecall"
+    "pinecall",
+    "android",
+    "connectionservice",
+    "telecom"
   ],
   "dependencies": {
     "@pinecall/web": "^0.3.0"
@@ -71,6 +75,9 @@
   "capacitor": {
     "ios": {
       "src": "ios"
+    },
+    "android": {
+      "src": "android"
     }
   }
 }

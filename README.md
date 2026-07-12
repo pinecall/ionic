@@ -189,15 +189,25 @@ npx cap run ios   # real device — CallKit doesn't work on the simulator
 | iOS device | CallKit (native) | WebRTC.framework (native) | ✅ |
 | iOS simulator | in-app (yours) | webview WebRTC | ✅ (CallKit unsupported by the simulator) |
 | Web | in-app (yours) | webview WebRTC | ✅ |
-| Android | ConnectionService | native WebRTC | 🔜 roadmap |
+| Android device (API 26+) | your UI + self-managed Telecom | native WebRTC | ✅ (pending device test) |
+| Android emulator | in-app (yours) | webview WebRTC | ✅ (falls back like the simulator) |
+
+### Android notes
+
+Android uses self-managed [`ConnectionService`](https://developer.android.com/reference/android/telecom/ConnectionService)
+(the CallKit equivalent — native audio routing/focus/Bluetooth/DND) while **your
+app draws the in-call UI** (the CallOverlay). WebRTC runs natively via
+`io.github.webrtc-sdk:android`. Run `npx cap add android` then `npx cap sync`;
+the plugin's permissions + `ConnectionService` auto-merge. Request `RECORD_AUDIO`
++ `MANAGE_OWN_CALLS` at runtime. Requires API 26+; emulators fall back to the
+webview path.
 
 ## Roadmap
 
-- Android (ConnectionService + native WebRTC)
-- **PushKit/VoIP push** — ring a killed/backgrounded app when the agent calls
-  you. Needs a **paid Apple Developer account** (VoIP push certificate).
-  Reference implementation (native + backend code) →
-  [`docs/background-calls-pushkit.md`](docs/background-calls-pushkit.md)
+- **Background/killed-app ringing** — PushKit (iOS, needs a **paid Apple
+  Developer account**) + FCM high-priority push (Android) with a
+  full-screen-intent notification. iOS reference implementation (native +
+  backend) → [`docs/background-calls-pushkit.md`](docs/background-calls-pushkit.md)
 - Mid-call `configure()` (hot-swap voice/language) and sealed token metadata
 - Reconnection / ICE restarts, bluetooth route picker, CallKit icon
 - `@pinecall/react-native` with the same architecture
