@@ -186,10 +186,10 @@ npx cap run ios   # real device — CallKit doesn't work on the simulator
 
 | Target | Call UI | Audio | Status |
 |---|---|---|---|
-| iOS device | CallKit (native) | WebRTC.framework (native) | ✅ |
+| iOS device | CallKit (native) | WebRTC.framework (native) | ✅ verified end-to-end |
 | iOS simulator | in-app (yours) | webview WebRTC | ✅ (CallKit unsupported by the simulator) |
 | Web | in-app (yours) | webview WebRTC | ✅ |
-| Android device (API 26+) | your UI + self-managed Telecom | native WebRTC | ✅ (pending device test) |
+| Android device (API 26+) | your UI + self-managed Telecom | native WebRTC | ⚠️ implemented, compiles, **not yet run on a device** |
 | Android emulator | in-app (yours) | webview WebRTC | ✅ (falls back like the simulator) |
 
 ### Android notes
@@ -210,7 +210,12 @@ webview path.
   backend) → [`docs/background-calls-pushkit.md`](docs/background-calls-pushkit.md)
 - Mid-call `configure()` (hot-swap voice/language) and sealed token metadata
 - Reconnection / ICE restarts, bluetooth route picker, CallKit icon
-- `@pinecall/react-native` with the same architecture
+- Android device verification (the plugin compiles and is complete, but has not
+  yet been run on physical hardware)
+
+> Using React Native instead of Ionic?
+> [`@pinecall/react-native`](https://github.com/pinecall/react-native) is the
+> same architecture, same API.
 
 ## License
 
