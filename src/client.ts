@@ -203,29 +203,27 @@ export class CallClient {
   }
 
   /**
-   * La transcripción del usuario: la parcial (STT interino) se va reemplazando hasta que
-   * llega la final.
-   *
-   * Se busca el ÚLTIMO mensaje de usuario que siga interino, esté donde esté — no sólo el
-   * último del array. Si el bot empieza a hablar antes de que la STT cierre la frase (barge-in,
-   * o simplemente que `bot.word` gane la carrera a `user.message`), el mensaje del bot queda
-   * último; mirando sólo esa posición, la final del usuario se AGREGABA en vez de reemplazar la
-   * parcial, y la frase aparecía DOS VECES en pantalla.
+   * User transcript: replace the LAST user message as long as no bot reply follows it —
+   * ported verbatim from `mergeUserTurn` in @pinecall/web's VoiceSession, which is what the
+   * web/simulator strategy already runs. This native path was a copy of the PRE-fix web
+   * logic ("find last interim"), and that check duplicates bubbles two ways: Deepgram Flux
+   * fires MULTIPLE `user.message` finals per turn (after the first, isInterim is false, so
+   * the next final appended), and a bot.word racing ahead of the final left the interim
+   * stranded behind the bot message. A new user bubble starts only after a bot reply.
    */
   private upsertUser(text: string, isInterim: boolean) {
     const msgs = this.state.messages;
-    let idx = -1;
+    let lastUser = -1;
     for (let i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].role === 'user' && msgs[i].isInterim) {
-        idx = i;
+      if (msgs[i].role === 'user') {
+        lastUser = i;
         break;
       }
-      // Otra final del usuario más atrás cierra la búsqueda: pertenece a otro turno.
-      if (msgs[i].role === 'user') break;
     }
-    if (idx >= 0) {
+    const botAfter = lastUser >= 0 && msgs.slice(lastUser + 1).some((m) => m.role === 'bot');
+    if (lastUser >= 0 && !botAfter) {
       const next = [...msgs];
-      next[idx] = { ...next[idx], text, isInterim };
+      next[lastUser] = { ...next[lastUser], text, isInterim };
       this.set({ messages: next });
     } else {
       this.set({
