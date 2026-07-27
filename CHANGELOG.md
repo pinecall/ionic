@@ -3,6 +3,30 @@
 All notable changes to `@pinecall/ionic` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.1] — 2026-07-27
+
+### Fixed — duplicate user bubbles in the native transcript
+
+- `CallClient.upsertUser` appended a second bubble for the same utterance on
+  physical devices. Deepgram Flux fires **multiple `user.message` finals per
+  turn**, and the old "find the last interim message" check only matched the
+  first one — every extra final appended a duplicate. A `bot.word` arriving
+  before the final made it worse: the bot message became the last entry, so the
+  final never found the interim to replace.
+- The web/simulator strategy never showed this, which is why it went unnoticed:
+  there `CallClient` delegates the transcript to `@pinecall/web`'s
+  `VoiceSession`, whose `mergeUserTurn` already carries the fix. The native
+  DataChannel path was a copy of the pre-fix logic.
+- Ported `mergeUserTurn` verbatim: replace the **last user message while no bot
+  reply follows it**; a new user bubble starts only after a bot reply. Both
+  strategies now behave identically.
+- Message ids were `messages.length + 1`, but an upsert replaces without growing
+  the array, so two different messages could share an id — enough to collapse or
+  duplicate rows in any consumer using the id as a React `key`. Replaced with a
+  monotonic counter that resets with the call.
+
+Reported from a real iPhone by the Axion app.
+
 ## [0.2.0] — 2026-07-16
 
 ### Added — Android: native calls via self-managed ConnectionService
