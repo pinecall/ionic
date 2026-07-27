@@ -56,7 +56,7 @@ import { Pinecall } from "@pinecall/sdk";
 const pc = new Pinecall(); // PINECALL_API_KEY from env
 const agent = pc.agent("assistant", {
   prompt: "You are a friendly voice assistant.",
-  llm: "openai/gpt-5-chat-latest",
+  llm: "openai/gpt-5.3-chat-latest",
   voice: "elevenlabs/sarah",
   stt: "deepgram/flux",
   greeting: "Hey there! How can I help you today?",

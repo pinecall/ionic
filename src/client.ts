@@ -40,6 +40,12 @@ export class CallClient {
   private nativeWired = false;
   private durationTimer: ReturnType<typeof setInterval> | null = null;
   private botWords: Record<string, string[]> = {};
+  /**
+   * Ids monótonos. NO se puede usar `messages.length + 1`: un upsert reemplaza sin
+   * hacer crecer el array, así que dos mensajes distintos terminan con el mismo id y
+   * un `key={m.id}` en React los colapsa o los duplica.
+   */
+  private nextId = 1;
 
   // ── reactive store (plugs into useSyncExternalStore, Vue refs, etc.) ──────
 
@@ -196,14 +202,34 @@ export class CallClient {
     }
   }
 
+  /**
+   * La transcripción del usuario: la parcial (STT interino) se va reemplazando hasta que
+   * llega la final.
+   *
+   * Se busca el ÚLTIMO mensaje de usuario que siga interino, esté donde esté — no sólo el
+   * último del array. Si el bot empieza a hablar antes de que la STT cierre la frase (barge-in,
+   * o simplemente que `bot.word` gane la carrera a `user.message`), el mensaje del bot queda
+   * último; mirando sólo esa posición, la final del usuario se AGREGABA en vez de reemplazar la
+   * parcial, y la frase aparecía DOS VECES en pantalla.
+   */
   private upsertUser(text: string, isInterim: boolean) {
     const msgs = this.state.messages;
-    const last = msgs[msgs.length - 1];
-    if (last?.role === 'user' && last.isInterim) {
-      this.set({ messages: [...msgs.slice(0, -1), { ...last, text, isInterim }] });
+    let idx = -1;
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === 'user' && msgs[i].isInterim) {
+        idx = i;
+        break;
+      }
+      // Otra final del usuario más atrás cierra la búsqueda: pertenece a otro turno.
+      if (msgs[i].role === 'user') break;
+    }
+    if (idx >= 0) {
+      const next = [...msgs];
+      next[idx] = { ...next[idx], text, isInterim };
+      this.set({ messages: next });
     } else {
       this.set({
-        messages: [...msgs, { id: msgs.length + 1, role: 'user', text, isInterim }],
+        messages: [...msgs, { id: this.nextId++, role: 'user', text, isInterim }],
       });
     }
   }
@@ -215,7 +241,7 @@ export class CallClient {
       this.set({ messages: msgs.map((m, i) => (i === idx ? { ...m, text } : m)) });
     } else {
       this.set({
-        messages: [...msgs, { id: msgs.length + 1, role: 'bot', text, messageId }],
+        messages: [...msgs, { id: this.nextId++, role: 'bot', text, messageId }],
       });
     }
   }
@@ -248,6 +274,7 @@ export class CallClient {
     this.session?.destroy();
     this.session = null;
     this.botWords = {};
+    this.nextId = 1;
     this.set({ ...INITIAL_STATE, error: this.state.error });
   }
 }
